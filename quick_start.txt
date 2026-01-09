@@ -1,0 +1,90 @@
+╔══════════════════════════════════════════════════════════╗
+    ║                                                          ║
+    ║     🏎️  F1 25 RACE ENGINEER - DÉMARRAGE RAPIDE  🏎️      ║
+    ║                                                          ║
+╔══════════════════════════════════════════════════════════╗
+
+
+    📋 INSTALLATION ULTRA-RAPIDE (2 MINUTES)
+    ════════════════════════════════════════════════════════════
+
+    1️⃣  Double-cliquez sur: "INSTALLER ICI.bat"
+    
+    2️⃣  Attendez la fin de l'installation
+    
+    3️⃣  Double-cliquez sur: "Lancer F1 Race Engineer.bat"
+    
+    ✅  C'EST TOUT!
+
+
+    ⚠️  IMPORTANT - PREMIÈRE INSTALLATION
+    ════════════════════════════════════════════════════════════
+
+    Si vous voyez un message Windows Defender:
+    
+    "Windows a protégé votre PC"
+    
+    → Cliquez sur "Informations complémentaires"
+    → Cliquez sur "Exécuter quand même"
+    
+    C'est normal! Windows bloque les .bat non signés.
+    Le code est open-source et sans danger.
+
+
+    📦 VOUS AVEZ BESOIN DE:
+    ════════════════════════════════════════════════════════════
+
+    ✅ Python 3.7+ (téléchargez sur python.org si absent)
+    ✅ Connexion internet (pour télécharger les packages)
+    ✅ F1 25 (avec télémétrie UDP activée)
+
+
+    🎮 APRÈS L'INSTALLATION:
+    ════════════════════════════════════════════════════════════
+
+    1. Lancez F1 25
+    2. Activez la télémétrie: 
+       Options → Paramètres → Télémétrie → UDP: ON
+    3. Lancez l'application via le raccourci
+    4. Obtenez une clé API gratuite (Mistral recommandé)
+
+
+    🆓 CLÉ API GRATUITE (30 SECONDES):
+    ════════════════════════════════════════════════════════════
+
+    → https://console.mistral.ai/
+    → Créez un compte (email)
+    → API Keys → Créer
+    → Copiez dans l'application (⚙️ Config API)
+
+
+    🎤 COMMANDES VOCALES:
+    ════════════════════════════════════════════════════════════
+
+    Dites: "BONO" + votre question
+
+    Exemples:
+    • "Bono, état des pneus"
+    • "Bono, quelle position"
+    • "Bono, stratégie"  
+    • "Bono, aide"
+
+
+    ❓ BESOIN D'AIDE?
+    ════════════════════════════════════════════════════════════
+
+    → Lisez: GUIDE D'INSTALLATION.txt (détails complets)
+    → Lisez: README.md (après installation)
+    → Lancez: test_diagnostic.py (problème audio)
+
+
+    🚀 PRÊT? ALLONS-Y!
+    ════════════════════════════════════════════════════════════
+
+    Double-cliquez maintenant sur: "INSTALLER ICI.bat"
+
+
+    ════════════════════════════════════════════════════════════
+                         Bon pilotage! 🏁
+    ════════════════════════════════════════════════════════════
+

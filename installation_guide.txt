@@ -1,0 +1,124 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║          🏎️  F1 25 RACE ENGINEER - GUIDE D'INSTALLATION  🏎️       ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+📦 CONTENU DU PACKAGE
+═══════════════════════════════════════════════════════════════════
+
+✅ INSTALLER ICI.bat          → Double-cliquez pour installer
+✅ setup.py                    → Script d'installation automatique
+✅ f1_analyzer.py              → Application principale
+✅ test_diagnostic.py          → Tests audio (optionnel)
+✅ test_audio_fix.py           → Diagnostic avancé (optionnel)
+
+═══════════════════════════════════════════════════════════════════
+🚀 INSTALLATION EN 1 CLIC
+═══════════════════════════════════════════════════════════════════
+
+1. Double-cliquez sur: "INSTALLER ICI.bat"
+
+2. Suivez les instructions à l'écran
+
+3. C'est tout! ✅
+
+L'installateur va:
+  ✅ Vérifier que Python est installé
+  ✅ Installer toutes les bibliothèques nécessaires
+  ✅ Créer un raccourci sur votre bureau
+  ✅ Créer un fichier de lancement facile
+  ✅ Vous guider pour la voix française
+
+═══════════════════════════════════════════════════════════════════
+📋 PRÉ-REQUIS
+═══════════════════════════════════════════════════════════════════
+
+⚠️ OBLIGATOIRE:
+  • Python 3.7 ou supérieur
+    → Si pas installé: https://www.python.org/downloads/
+    → ⚠️ Cochez "Add Python to PATH" lors de l'installation!
+
+✅ RECOMMANDÉ:
+  • Connexion internet (pour télécharger les bibliothèques)
+  • Microphone (pour les commandes vocales)
+  • Haut-parleurs/casque (pour entendre Bono)
+
+═══════════════════════════════════════════════════════════════════
+🎮 APRÈS L'INSTALLATION
+═══════════════════════════════════════════════════════════════════
+
+1️⃣ CONFIGURER F1 25:
+   • Lancez F1 25
+   • Options → Paramètres → Télémétrie
+   • UDP Telemetry: ON
+   • Port: 20777
+
+2️⃣ LANCER L'APPLICATION:
+   Double-cliquez sur: "Lancer F1 Race Engineer.bat"
+   (ou utilisez le raccourci sur votre bureau)
+
+3️⃣ CONFIGURER UNE CLÉ API (GRATUITE):
+   Dans l'app, cliquez: ⚙️ Config API
+   
+   Recommandé - Mistral AI (Gratuit):
+   • https://console.mistral.ai/
+   • Créez un compte
+   • API Keys → Créer
+   • Copiez la clé dans l'app
+
+4️⃣ COMMANDES VOCALES:
+   • Cliquez sur: 🎤 Voice: OFF
+   • Dites: "Bono" + votre question
+   • Exemple: "Bono, état des pneus"
+
+═══════════════════════════════════════════════════════════════════
+🔧 DÉPANNAGE
+═══════════════════════════════════════════════════════════════════
+
+❌ PROBLÈME: "Python n'est pas reconnu"
+   SOLUTION: 
+   1. Réinstallez Python depuis python.org
+   2. ⚠️ COCHEZ "Add Python to PATH"
+   3. Relancez l'installateur
+
+❌ PROBLÈME: "pip n'est pas reconnu"
+   SOLUTION:
+   Ouvrez CMD et tapez:
+   python -m ensurepip --upgrade
+
+❌ PROBLÈME: Je n'entends pas Bono
+   SOLUTION:
+   1. Vérifiez le mixeur de volume Windows
+   2. Montez le volume de l'app à 100%
+   3. Vérifiez que vos haut-parleurs fonctionnent
+   4. Lancez: test_audio_fix.py
+
+❌ PROBLÈME: Les commandes vocales ne marchent pas
+   SOLUTION:
+   1. Vérifiez que votre micro est branché
+   2. Windows: Paramètres → Confidentialité → Microphone
+   3. Autorisez Python à accéder au micro
+
+═══════════════════════════════════════════════════════════════════
+📚 DOCUMENTATION COMPLÈTE
+═══════════════════════════════════════════════════════════════════
+
+Après installation, consultez:
+• README.md → Guide complet d'utilisation
+• "Bono, aide" → Liste des commandes vocales
+
+═══════════════════════════════════════════════════════════════════
+💡 SUPPORT
+═══════════════════════════════════════════════════════════════════
+
+Si vous avez des problèmes:
+1. Lisez le README.md
+2. Lancez test_diagnostic.py
+3. Vérifiez que F1 25 a la télémétrie activée
+
+═══════════════════════════════════════════════════════════════════
+
+Bon pilotage! 🏁
+
+═══════════════════════════════════════════════════════════════════

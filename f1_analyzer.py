@@ -949,60 +949,119 @@ class RaceEngineer:
         self.is_speaking = False
         self.enabled = Config.ENGINEER_ENABLED
         self.last_advice_time = datetime.now()
+        self.last_advice_content = {}
         
-        # Initialisation du moteur TTS
-        try:
-            self.tts_engine = pyttsx3.init()
-            self.tts_engine.setProperty('rate', Config.ENGINEER_VOICE_RATE)
-            
-            # Configuration de la voix
-            voices = self.tts_engine.getProperty('voices')
-            if len(voices) > 0:
-                # Essayer de trouver une voix française
-                french_voice = None
-                for voice in voices:
-                    if 'french' in voice.name.lower() or 'fr' in voice.id.lower():
-                        french_voice = voice.id
-                        break
-                
-                if french_voice:
-                    self.tts_engine.setProperty('voice', french_voice)
-                else:
-                    # Utiliser la première voix disponible
-                    self.tts_engine.setProperty('voice', voices[0].id)
-            
-            # Augmenter le volume
-            self.tts_engine.setProperty('volume', 1.0)
-            
-            print("✅ Moteur TTS initialisé avec succès")
-        except Exception as e:
-            print(f"⚠️ Erreur initialisation TTS: {e}")
-            self.tts_engine = None
+        # FORCER l'utilisation de Windows COM (testé et fonctionne)
+        self.init_windows_com()
         
-        # Thread pour la parole
+        # Thread pour la parole avec COM initialisé
         self.speech_thread = threading.Thread(target=self._speech_worker, daemon=True)
         self.speech_thread.start()
     
+    def init_windows_com(self):
+        """Initialise Windows SAPI via COM (méthode garantie)"""
+        try:
+            import win32com.client
+            import pythoncom
+            
+            # Initialiser COM pour le thread principal
+            pythoncom.CoInitialize()
+            
+            self.tts_engine = win32com.client.Dispatch("SAPI.SpVoice")
+            
+            # Lister toutes les voix disponibles
+            voices = self.tts_engine.GetVoices()
+            print(f"\n🎤 Voix disponibles ({voices.Count}):")
+            
+            french_voice = None
+            best_voice = None
+            
+            for i in range(voices.Count):
+                voice = voices.Item(i)
+                voice_name = voice.GetDescription()
+                print(f"  {i}: {voice_name}")
+                
+                # Chercher une voix française
+                if 'french' in voice_name.lower() or 'français' in voice_name.lower() or 'hortense' in voice_name.lower() or 'julie' in voice_name.lower():
+                    french_voice = voice
+                    print(f"    ✅ Voix française détectée!")
+                
+                # Chercher des voix plus naturelles (Microsoft David/Zira Desktop sont meilleures que Mobile)
+                if 'desktop' in voice_name.lower() and not french_voice:
+                    best_voice = voice
+            
+            # Sélectionner la meilleure voix
+            if french_voice:
+                self.tts_engine.Voice = french_voice
+                print(f"✅ Voix française sélectionnée: {french_voice.GetDescription()}")
+            elif best_voice:
+                self.tts_engine.Voice = best_voice
+                print(f"✅ Meilleure voix anglaise sélectionnée: {best_voice.GetDescription()}")
+            else:
+                print("⚠️ Utilisation de la voix par défaut")
+            
+            # Configuration optimale pour une voix naturelle
+            self.tts_engine.Volume = 100  # Volume maximum
+            self.tts_engine.Rate = 0  # Vitesse normale (entre -10 et 10, 0 = normal)
+            
+            print(f"🔊 Volume: 100 | Vitesse: {self.tts_engine.Rate}")
+            
+            # Test avec la nouvelle voix
+            test_message = "Ingénieur de course prêt. Bonjour pilote!"
+            self.tts_engine.Speak(test_message)
+            print("✅ Test audio réussi avec la nouvelle voix!")
+            
+        except Exception as e:
+            print(f"❌ Erreur initialisation Windows COM: {e}")
+            print("💡 Assurez-vous que pywin32 est installé: pip install pywin32")
+            self.tts_engine = None
+    
     def _speech_worker(self):
-        """Worker thread pour gérer la file d'attente de parole"""
+        """Worker thread pour la parole - avec COM initialisé par thread"""
+        import pythoncom
+        
+        # IMPORTANT: Chaque thread doit initialiser COM
+        pythoncom.CoInitialize()
+        
         while True:
             try:
                 message = self.speech_queue.get()
-                if message and self.tts_engine and self.enabled:
-                    self.is_speaking = True
-                    print(f"🎙️ Bono parle: {message}")  # Debug
-                    self.tts_engine.say(message)
-                    self.tts_engine.runAndWait()
-                    self.is_speaking = False
-                    print("✅ Message vocal terminé")  # Debug
+                
+                if message and self.enabled:
+                    if self.tts_engine:
+                        self.is_speaking = True
+                        print(f"🎙️ Bono dit: '{message}'")
+                        
+                        try:
+                            self.tts_engine.Speak(message)
+                            print("✅ Message prononcé avec succès")
+                        except Exception as e:
+                            print(f"❌ Erreur lors de la prononciation: {e}")
+                            # Réinitialiser COM si erreur
+                            try:
+                                import win32com.client
+                                self.tts_engine = win32com.client.Dispatch("SAPI.SpVoice")
+                                self.tts_engine.Volume = 100
+                                self.tts_engine.Rate = 1
+                                self.tts_engine.Speak(message)
+                            except:
+                                pass
+                        
+                        self.is_speaking = False
+                    else:
+                        print("⚠️ Moteur TTS non disponible")
+                        
             except Exception as e:
-                print(f"❌ Erreur TTS: {e}")
+                print(f"❌ Erreur thread parole: {e}")
                 self.is_speaking = False
+        
+        pythoncom.CoUninitialize()
     
     def speak(self, message, priority=False):
         """Fait parler l'ingénieur"""
         if not self.enabled or not self.tts_engine:
-            print(f"⚠️ TTS désactivé ou non disponible. Message: {message}")
+            print(f"⚠️ TTS désactivé ou non disponible")
+            print(f"   Message ignoré: {message}")
             return
         
         # Si prioritaire, vider la queue
@@ -1013,11 +1072,11 @@ class RaceEngineer:
                 except:
                     break
         
-        print(f"📤 Ajout à la queue: {message}")  # Debug
+        print(f"📤 Message ajouté à la queue: {message}")
         self.speech_queue.put(message)
     
     def analyze_and_speak(self, telemetry_data, lap_data=None):
-        """Analyse les données et donne des conseils vocaux"""
+        """Analyse les données et donne des conseils vocaux (anti-spam)"""
         if not self.enabled or not telemetry_data:
             return None
         
@@ -1028,9 +1087,13 @@ class RaceEngineer:
         
         advice = self._generate_advice(telemetry_data, lap_data)
         if advice:
-            self.speak(advice['speech'])
-            self.last_advice_time = datetime.now()
-            return advice
+            # Vérifier si c'est le même conseil que la dernière fois (anti-spam)
+            advice_key = advice['text']
+            if advice_key != self.last_advice_content.get('last', ''):
+                self.speak(advice['speech'])
+                self.last_advice_time = datetime.now()
+                self.last_advice_content['last'] = advice_key
+                return advice
         
         return None
     
@@ -1039,26 +1102,25 @@ class RaceEngineer:
         advice = {'speech': '', 'text': ''}
         messages = []
         
-        # Analyse de la température des pneus
+        # Analyse de la température des pneus (seuils ajustés pour éviter spam)
         avg_tyre_temp = sum(telemetry_data.tyres_surface_temperature) / 4
-        if avg_tyre_temp < 70:
-            messages.append("Température des pneus basse. Pousse un peu pour les chauffer.")
-        elif avg_tyre_temp > 110:
-            messages.append("Attention, surchauffe des pneus. Lève le pied dans les virages serrés.")
+        if avg_tyre_temp < 60:  # Vraiment froid
+            messages.append("Température des pneus très basse. Pousse fort pour les chauffer.")
+        elif avg_tyre_temp > 115:  # Vraiment chaud
+            messages.append("Attention, surchauffe critique des pneus. Lève le pied immédiatement.")
         
-        # Analyse de la température des freins
+        # Analyse de la température des freins (seuils plus stricts)
         avg_brake_temp = sum(telemetry_data.brakes_temperature) / 4
-        if avg_brake_temp > 800:
-            messages.append("Freins très chauds. Refroidis-les, utilise le frein moteur.")
+        if avg_brake_temp > 900:  # Critique
+            messages.append("Freins en surchauffe critique. Utilise le frein moteur.")
         
-        # Gestion du carburant et stratégie
-        if lap_data:
-            if lap_data.current_lap_num % 5 == 0 and lap_data.current_lap_num > 0:
-                messages.append(f"Tour {lap_data.current_lap_num}. Continue comme ça, bon rythme.")
+        # Gestion du carburant et stratégie (moins fréquent)
+        if lap_data and lap_data.current_lap_num % 10 == 0 and lap_data.current_lap_num > 0:
+            messages.append(f"Tour {lap_data.current_lap_num}. Continue, bon rythme.")
         
-        # DRS disponible
+        # DRS disponible (ne pas spam)
         if telemetry_data.drs == 1:
-            messages.append("DRS disponible, utilise-le dans les lignes droites.")
+            messages.append("DRS disponible.")
         
         if messages:
             advice['speech'] = " ".join(messages)
@@ -1493,39 +1555,52 @@ class F1TelemetryManager:
             return None
     
     def get_analysis_summary(self):
-        """Génère un résumé pour l'analyse IA"""
+        """Génère un résumé complet pour l'analyse IA (historique des derniers tours)"""
         if not self.telemetry_history or not self.current_telemetry:
             return None
         
-        # Calcule des statistiques
-        recent_telemetry = self.telemetry_history[-100:] if len(self.telemetry_history) > 100 else self.telemetry_history
+        # Analyser TOUT l'historique disponible, pas juste les 100 derniers
+        all_telemetry = self.telemetry_history
+        recent_telemetry = self.telemetry_history[-200:] if len(self.telemetry_history) > 200 else self.telemetry_history
         
-        speeds = [t.speed for t in recent_telemetry]
-        throttles = [t.throttle for t in recent_telemetry]
-        brakes = [t.brake for t in recent_telemetry]
+        speeds = [t.speed for t in all_telemetry]
+        throttles = [t.throttle for t in all_telemetry]
+        brakes = [t.brake for t in all_telemetry]
         
-        # Température moyenne des pneus
-        tyre_temps = [sum(t.tyres_surface_temperature) / 4 for t in recent_telemetry]
+        # Température moyenne et évolution des pneus
+        tyre_temps = [sum(t.tyres_surface_temperature) / 4 for t in all_telemetry]
+        
+        # Analyse des tendances (progression/régression)
+        if len(speeds) > 50:
+            first_half_speed = sum(speeds[:len(speeds)//2]) / (len(speeds)//2)
+            second_half_speed = sum(speeds[len(speeds)//2:]) / (len(speeds)//2)
+            speed_trend = "amélioration" if second_half_speed > first_half_speed else "dégradation"
+        else:
+            speed_trend = "stable"
         
         summary = {
             'session_info': {
                 'packets_received': self.packets_received,
-                'samples_analyzed': len(recent_telemetry)
+                'samples_analyzed': len(all_telemetry),
+                'session_duration': f"{len(all_telemetry) / 20:.1f} secondes"  # ~20 paquets/sec
             },
             'speed_stats': {
                 'current': self.current_telemetry.speed,
-                'average': sum(speeds) / len(speeds) if speeds else 0,
+                'average': round(sum(speeds) / len(speeds), 1) if speeds else 0,
                 'max': max(speeds) if speeds else 0,
-                'min': min(speeds) if speeds else 0
+                'min': min(speeds) if speeds else 0,
+                'trend': speed_trend
             },
             'throttle_stats': {
                 'current': round(self.current_telemetry.throttle * 100, 1),
-                'average': round(sum(throttles) / len(throttles) * 100, 1) if throttles else 0
+                'average': round(sum(throttles) / len(throttles) * 100, 1) if throttles else 0,
+                'full_throttle_time_percent': round(len([t for t in throttles if t > 0.95]) / len(throttles) * 100, 1) if throttles else 0
             },
             'brake_stats': {
                 'current': round(self.current_telemetry.brake * 100, 1),
                 'average': round(sum(brakes) / len(brakes) * 100, 1) if brakes else 0,
-                'brake_temp_avg': round(sum(self.current_telemetry.brakes_temperature) / 4, 1)
+                'brake_temp_avg': round(sum(self.current_telemetry.brakes_temperature) / 4, 1),
+                'brake_temp_max': max(self.current_telemetry.brakes_temperature)
             },
             'current_state': {
                 'gear': self.current_telemetry.gear,
@@ -1536,15 +1611,17 @@ class F1TelemetryManager:
                 'surface_temp': [round(t, 1) for t in self.current_telemetry.tyres_surface_temperature],
                 'inner_temp': [round(t, 1) for t in self.current_telemetry.tyres_inner_temperature],
                 'pressure': [round(p, 2) for p in self.current_telemetry.tyres_pressure],
-                'avg_surface_temp': round(sum(tyre_temps) / len(tyre_temps), 1) if tyre_temps else 0
-            }
+                'avg_surface_temp': round(sum(tyre_temps) / len(tyre_temps), 1) if tyre_temps else 0,
+                'temp_trend': 'montée' if len(tyre_temps) > 10 and tyre_temps[-1] > tyre_temps[0] else 'descente'
+            },
+            'mode': 'CONTRE LA MONTRE' if not self.current_lap or self.current_lap.car_position == 0 else 'COURSE'
         }
         
         # Ajoute les données de tour si disponibles
         if self.current_lap:
             summary['lap_info'] = {
                 'current_lap': self.current_lap.current_lap_num,
-                'position': self.current_lap.car_position,
+                'position': self.current_lap.car_position if self.current_lap.car_position > 0 else 'N/A (Contre-la-montre)',
                 'sector': self.current_lap.sector,
                 'lap_distance': round(self.current_lap.lap_distance, 1),
                 'last_lap_time': self._format_time(self.current_lap.last_lap_time_in_ms),
@@ -1570,8 +1647,17 @@ class F1TelemetryManager:
 class F1AnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("F1 25 Race Engineer - Ingénieur de Course IA avec Commande Vocale")
-        self.root.geometry("1400x900")
+        self.root.title("🏎️ F1 25 Race Engineer Pro - Ingénieur IA avec Commande Vocale")
+        self.root.geometry("1500x950")
+        
+        # Style moderne
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Couleurs modernes
+        style.configure('Title.TLabel', font=('Segoe UI', 12, 'bold'), foreground='#2196F3')
+        style.configure('Status.TLabel', font=('Segoe UI', 10), foreground='#4CAF50')
+        style.configure('Accent.TButton', font=('Segoe UI', 10, 'bold'))
         
         # Charger la configuration sauvegardée
         Config.load_config()
@@ -1645,10 +1731,10 @@ class F1AnalyzerApp:
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configuration
-        config_frame = ttk.LabelFrame(main_frame, text="⚙️ Configuration", padding="10")
+        config_frame = ttk.LabelFrame(main_frame, text="⚙️ Configuration", padding="10", style='Title.TLabel')
         config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
-        ttk.Label(config_frame, text="IA:").grid(row=0, column=0, sticky=tk.W, padx=5)
+        ttk.Label(config_frame, text="IA:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, padx=5)
         self.ai_selector = ttk.Combobox(config_frame, state="readonly", width=25)
         self.ai_selector.grid(row=0, column=1, padx=5)
         self.ai_selector.bind('<<ComboboxSelected>>', self.on_ai_selected)
@@ -1764,8 +1850,8 @@ class F1AnalyzerApp:
     def load_analyzers(self):
         """Charge les analyseurs IA disponibles"""
         self.analyzers = {
-            "NVIDIA Nemotron (Gratuit) 🆓": NvidiaAnalyzer(Config.NVIDIA_API_KEY),
             "Mistral AI (Gratuit) 🆓": MistralAnalyzer(Config.MISTRAL_API_KEY),
+            "NVIDIA Nemotron (Gratuit) 🆓": NvidiaAnalyzer(Config.NVIDIA_API_KEY),
             "Gemini (Google)": GeminiAnalyzer(Config.GEMINI_API_KEY),
             "ChatGPT (OpenAI)": OpenAIAnalyzer(Config.OPENAI_API_KEY),
             "Claude (Anthropic)": ClaudeAnalyzer(Config.CLAUDE_API_KEY)
@@ -1945,28 +2031,43 @@ Position:
         info = """
 💡 Obtention des clés API GRATUITES:
 
+🆓 MISTRAL AI (GRATUIT - RECOMMANDÉ):
+   • https://console.mistral.ai/
+   • Créez un compte → API Keys → Gratuit
+   • Meilleur pour le français!
+
 🆓 NVIDIA Nemotron (GRATUIT):
    • https://build.nvidia.com/nvidia/llama-3_1-nemotron-70b-instruct
    • Créez un compte → Obtenez votre clé API gratuite
-
-🆓 Mistral AI (GRATUIT):
-   • https://console.mistral.ai/
-   • Créez un compte → API Keys → Gratuit
 
 Autres (payants):
 • Gemini: makersuite.google.com/app/apikey
 • OpenAI: platform.openai.com/api-keys  
 • Claude: console.anthropic.com/settings/keys
 
-⚠️ IMPORTANT - Volume audio:
+⚠️ PROBLÈME DE VOLUME (IMPORTANT):
 Si vous n'entendez pas Bono:
-1. Vérifiez le volume dans le mixeur Windows
-2. Recherchez "Python" ou "F1 25 Race Engineer"
-3. Montez le curseur à 100%
+
+Solution 1 - Vérifier Windows:
+1. Ouvrez "Paramètres Windows" → "Système" → "Son"
+2. Assurez-vous que le bon périphérique de sortie est sélectionné
+3. Cliquez sur "Propriétés du périphérique" → Volume à 100%
+
+Solution 2 - Application bloquée:
+Si le volume de l'app est grisé/bloqué à 1:
+1. Fermez complètement l'application
+2. Ouvrez le mixeur de volume Windows
+3. Attendez que l'app réapparaisse quand vous la relancez
+4. Montez le volume IMMÉDIATEMENT à 100%
+
+Solution 3 - Forcer le son:
+• L'application force maintenant le volume TTS à 100%
+• Vérifiez vos haut-parleurs/casque
+• Testez avec "Bono, aide" après avoir activé les commandes vocales
 
 💾 Vos clés sont sauvegardées automatiquement
         """
-        ttk.Label(settings_window, text=info, justify=tk.LEFT, foreground='gray').pack()
+        ttk.Label(settings_window, text=info, justify=tk.LEFT, foreground='#444', font=('Segoe UI', 9)).pack(pady=10)
     
     def start_listening(self):
         """Démarre l'écoute"""
